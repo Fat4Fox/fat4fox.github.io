@@ -64,6 +64,89 @@ tricks. So I log them down here.
     # retrieve numpy array from the output tensor
     yhat = yhat.detach().numpy()
 ```
+### Pattern for training, validation, and testing
+A more general pattern for training, validation, and testing
+```python
+for epoch in range(n_epochs):
+
+    # Training
+    for data in train_dataloader:
+        input, targets = data
+        optimizer.zero_grad()
+        output = model(input)
+        train_loss = criterion(output, targets)
+        train_loss.backward()
+        optimizer.step()
+
+    # Validation
+    with torch.no_grad():
+      for input, targets in val_dataloader:
+          output = model(input)
+          val_loss = criterion(output, targets)
+
+# Testing
+with torch.no_grad():
+  for input, targets in test_dataloader:
+      output = model(input)
+      test_loss = criterion(output, targets)
+```
+
+Adding more capabilities, like printing information, reconfiguring a model, and
+adjusting a hyperparameter in the middle of training.
+```python
+for epoch in range(n_epochs):
+    total_train_loss = 0.0 
+    total_val_loss = 0.0  
+
+    if (epoch == epoch//2):
+      optimizer = optim.SGD(model.parameters(),
+                            lr=0.001) 
+    # Training
+    model.train() 
+    for data in train_dataloader:
+        input, targets = data
+        optimizer.zero_grad()
+        output = model(input)
+        train_loss = criterion(output, targets)
+        train_loss.backward()
+        optimizer.step()
+        total_train_loss += train_loss 
+
+    # Validation
+    model.eval() 
+    with torch.no_grad():
+      for input, targets in val_dataloader:
+          output = model(input)
+          val_loss = criterion(output, targets)
+          total_val_loss += val_loss 
+
+    print("""Epoch: {}
+          Train Loss: {}
+          Val Loss {}""".format(
+         epoch, total_train_loss,
+         total_val_loss)) 
+
+# Testing
+model.eval()
+with torch.no_grad():
+  for input, targets in test_dataloader:
+      output = model(input)
+      test_loss = criterion(output, targets)
+```
+Notes: 
+1. In the preceding code, we added some variables to keep track of the 
+running training and validation loss and we printed them for every epoch. 
+2. Next we use the train() or eval() method to configure the model for training 
+or evaluation, respectively. This only applies if the model’s forward() 
+function behaves differently for training and evaluation. For example, 
+some models may use dropout during training, but dropout should 
+not be applied during validation or testing. In this case, we can reconfigure 
+the model by calling model.train() or model.eval() before its execution.
+3. Lastly, we modified the LR in our optimizer halfway through training. This 
+enables us to train at a faster rate at first while fine-tuning our parameter 
+updates after training on half of the epochs.
+
+
 
 ### Your Model Class Inherit from Module
 ```python
